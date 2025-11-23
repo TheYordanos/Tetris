@@ -1,0 +1,293 @@
+package main
+
+import "core:math/rand"
+import "core:fmt"
+import rl "vendor:raylib"
+
+COLS :: 10
+ROWS :: 20
+CELL_SIZE :: 32
+
+SCREEN_WIDTH :: COLS * CELL_SIZE + (4 * CELL_SIZE + 30)
+SCREEN_HEIGHT :: ROWS * CELL_SIZE
+
+tetrominoes: [7][4][4]u8 = {
+	{ // I
+		{0, 0, 1, 0},
+		{0, 0, 1, 0},
+		{0, 0, 1, 0},
+		{0, 0, 1, 0}
+	},
+	{ // O
+		{0, 0, 0, 0},
+		{0, 1, 1, 0},
+		{0, 1, 1, 0},
+		{0, 0, 0, 0}
+	},
+	{ // T
+		{1, 1, 1, 0},
+		{0, 1, 0, 0},
+		{0, 0, 0, 0},
+		{0, 0, 0, 0}
+	},
+	{ // S
+		{0, 1, 1, 0},
+		{1, 1, 0, 0},
+		{0, 0, 0, 0},
+		{0, 0, 0, 0}
+	},
+	{ // Z
+		{1, 1, 0, 0},
+		{0, 1, 1, 0},
+		{0, 0, 0, 0},
+		{0, 0, 0, 0}
+	},
+	{ // J
+		{1, 0, 0, 0},
+		{1, 1, 1, 0},
+		{0, 0, 0, 0},
+		{0, 0, 0, 0}
+	},
+	{ // L
+		{0, 0, 1, 0},
+		{1, 1, 1, 0},
+		{0, 0, 0, 0},
+		{0, 0, 0, 0}
+	}
+}
+
+current_tetromino: [4][4]u8
+next_tetromino: [4][4]u8
+grid: [ROWS][COLS] i32 = 0
+
+can_move :: proc(new_pos: [2]i32, tetromino: [4][4]u8, is_vertical: bool) -> bool {
+	for y in 0..<i32(4) {
+		dy := new_pos.y + y
+		for x in 0..<i32(4) {
+			dx := new_pos.x + x
+			if tetromino[y][x] == 1 {
+				if is_vertical {
+					// Vertical
+					if dy >= ROWS do return false
+					else if dy >= 0 && (dx >= 0 && dx < COLS) do if grid[dy][dx] == 1 do return false
+				} else  {
+					// Horizontal
+					if (dx < 0 || dx >= COLS) do return false
+					else if dy >= 0 do if grid[dy][dx] == 1 do return false
+				}
+			}
+		}
+	}
+
+	return true
+}
+
+rotate :: proc(pos: [2]i32) {
+	new_pos: [4][4]u8
+
+	for i in 0..<4 {
+		for j in 0..<4 {
+			new_pos[4 - j - 1][i] = current_tetromino[i][j]
+		}
+	}
+
+
+	if can_move(pos, new_pos, true) && can_move(pos, new_pos, false) {
+		current_tetromino = new_pos
+	}
+}
+
+main :: proc() {
+
+	start_pos: [2]i32 = {COLS / 2 - 2, -3}
+	pos: [2]i32 = start_pos
+
+	current_time: f32 = 0
+
+	current_tetromino = tetrominoes[rand.int31() % 7]
+	next_tetromino = tetrominoes[rand.int31() % 7]
+
+	is_game_over: bool = false
+	score: i32 = 0
+
+	rl.InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Tetris")
+	defer rl.CloseWindow()
+
+	rl.SetTargetFPS(60)
+
+	for rl.WindowShouldClose() == false {
+
+		if !is_game_over {
+			current_time += rl.GetFrameTime()
+
+			time_between_fall: f32 = 0.3
+			if rl.IsKeyDown(.DOWN) || rl.IsKeyDown(.S) do time_between_fall *= 0.2
+
+			if current_time >= time_between_fall { // VERTICAL MOVEMENT
+				current_time -= time_between_fall
+				new_pos_y := pos.y + 1
+
+				if can_move({pos.x, new_pos_y}, current_tetromino, true) {
+					pos.y = new_pos_y
+				} else {
+					// Change Tetronimo
+					for y in 0..<i32(4) {
+						dy := pos.y + y
+
+						// Game over condition
+						if dy < 0 {
+							is_game_over = true
+						}
+
+						// Embed into grid
+						for x in 0..<i32(4) {
+							dx := pos.x + x
+
+							if current_tetromino[y][x] == 1 {
+								if dy >= 0 do grid[dy][dx] = 1
+							}
+						}
+					}
+
+					// Check for clearing
+					for y: i32 = ROWS - 1; y >= 0; {
+						is_full_row: bool = true
+						for x in 0..<COLS {
+							if grid[y][x] == 0 do is_full_row = false
+						}
+
+						// Move all things down
+						if is_full_row {
+
+							score += 1
+
+							for j: i32 = y; j > 0; j -= 1{
+								for x in 0..<COLS {
+									grid[j][x] = grid[j - 1][x]
+								}
+							}
+						} else {
+							y -= 1
+						}
+					}
+
+					current_tetromino = next_tetromino
+					next_tetromino = tetrominoes[rand.int31() % 7]
+					pos = start_pos
+				}
+			}
+
+			{ // HORIZONTAL MOVEMENT
+				new_pos_x: i32 = -COLS
+				if rl.IsKeyPressed(.A) || rl.IsKeyPressed(.LEFT)  do new_pos_x = pos.x - 1
+				if rl.IsKeyPressed(.D) || rl.IsKeyPressed(.RIGHT) do new_pos_x = pos.x + 1
+
+				if can_move({new_pos_x, pos.y}, current_tetromino, false) && new_pos_x != -COLS {
+					pos.x = new_pos_x
+				}
+			}
+
+			{ // ROTATION
+				if rl.IsKeyPressed(.W) || rl.IsKeyPressed(.UP) {
+					rotate(pos)
+				}
+			}
+		} else { // if is_game_over
+			if rl.IsKeyPressed(.SPACE) {
+				grid = 0
+
+				current_tetromino = tetrominoes[0]
+				next_tetromino = tetrominoes[rand.int31() % 7]
+
+				is_game_over = false
+				score = 0
+			}
+		}
+
+		rl.BeginDrawing()
+		rl.ClearBackground(rl.RAYWHITE)
+
+		// Grid Lines
+		for x in 0..<COLS+1 do rl.DrawLineV({f32(x * CELL_SIZE), 0}, {f32(x * CELL_SIZE), ROWS * CELL_SIZE}, rl.LIGHTGRAY)
+		for y in 0..<ROWS do rl.DrawLineV({0, f32(y * CELL_SIZE)}, {COLS * CELL_SIZE, f32(y * CELL_SIZE)}, rl.LIGHTGRAY)
+
+		// Tetromino
+		for y in 0..<i32(4) {
+			cy := (y + pos.y) * i32(CELL_SIZE)
+			ny := y * i32(CELL_SIZE) + 30
+
+			for x in 0..<i32(4) {
+				cx := (x + pos.x) * i32(CELL_SIZE)
+				nx := (x + COLS) * i32(CELL_SIZE) + 30
+
+				// Current Tetromino
+				if current_tetromino[y][x] == 1 {
+					rl.DrawRectangle(cx, cy, CELL_SIZE, CELL_SIZE, rl.BLUE)
+					rl.DrawRectangleLines(cx, cy, CELL_SIZE, CELL_SIZE, rl.BLACK)
+				}
+				
+				// Next Tetromino
+				if next_tetromino[y][x] == 1 {
+					rl.DrawRectangle(nx, ny, CELL_SIZE, CELL_SIZE, rl.LIGHTGRAY)
+					rl.DrawRectangleLines(nx, ny, CELL_SIZE, CELL_SIZE, rl.BLACK)
+				}
+			}
+		}
+
+		// Grid
+		for y in 0..<i32(ROWS) {
+			dy := y * CELL_SIZE
+			for x in 0..<i32(COLS) {
+				dx := x * CELL_SIZE
+
+				if grid[y][x] == 1 {
+					color: rl.Color = is_game_over ? rl.LIGHTGRAY : rl.BLUE
+					rl.DrawRectangle(dx, dy, CELL_SIZE, CELL_SIZE, color)
+					rl.DrawRectangleLines(dx, dy, CELL_SIZE, CELL_SIZE, rl.BLACK)
+				}
+			}
+		}
+
+		// rl.DrawRectangleLines(pos.x * CELL_SIZE, pos.y * CELL_SIZE, 4 * CELL_SIZE, 4 * CELL_SIZE, rl.BLACK)
+
+		{ // Score
+			text: cstring = fmt.caprint("Score:", score)
+			font_size: i32 = 24
+			width: i32 = rl.MeasureText(text, font_size)
+
+			x: i32 = i32(COLS * CELL_SIZE) + 30
+			y: i32 = i32(ROWS * CELL_SIZE) - 60
+
+			rl.DrawText(text, x, y, font_size, rl.BLACK)
+		}
+
+		// Game Over
+		if is_game_over {
+			rl.DrawRectangle(
+				SCREEN_WIDTH/2 - 150, 
+				SCREEN_HEIGHT/2 - 100,
+				300, 200,
+				rl.GRAY)
+
+			text: cstring = "Game Over"
+			font_size: i32 = 32
+			width: i32 = rl.MeasureText(text, font_size)
+
+			x: i32 = (SCREEN_WIDTH - width) / 2
+			y: i32 = (SCREEN_HEIGHT - font_size) / 2 - 20
+
+			rl.DrawText(text, x, y, font_size, rl.WHITE)
+
+			text = "<SPACE> to restart"
+			font_size = 24
+			width = rl.MeasureText(text, font_size)
+
+			x = (SCREEN_WIDTH - width) / 2
+			y = (SCREEN_HEIGHT - font_size) / 2 + 20
+
+			rl.DrawText(text, x, y, font_size, rl.LIGHTGRAY)
+		}
+
+		rl.EndDrawing()
+	}
+}
