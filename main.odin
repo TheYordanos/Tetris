@@ -11,6 +11,16 @@ CELL_SIZE :: 32
 SCREEN_WIDTH :: COLS * CELL_SIZE + (4 * CELL_SIZE + 30)
 SCREEN_HEIGHT :: ROWS * CELL_SIZE
 
+colors: [7]rl.Color = {
+	{0, 240, 240, 255}, // I
+	{240, 240, 0, 255}, // O
+	{160, 0, 240, 255}, // T
+	{0, 240, 0, 255},   // S
+	{240, 0, 0, 255},   // Z
+	{0, 0, 240, 255},   // J
+	{240, 160, 0, 255}  // L
+}
+
 tetrominoes: [7][4][4]u8 = {
 	{ // I
 		{0, 0, 1, 0},
@@ -60,7 +70,7 @@ current_tetromino_idx: u8
 current_tetromino: [4][4]u8
 next_tetromino_idx: u8
 next_tetromino: [4][4]u8
-grid: [ROWS][COLS] i32 = 0
+grid: [ROWS][COLS]u8 = 0
 
 can_move :: proc(new_pos: [2]i32, tetromino: [4][4]u8) -> bool {
 	for y in 0..<i32(4) {
@@ -72,11 +82,11 @@ can_move :: proc(new_pos: [2]i32, tetromino: [4][4]u8) -> bool {
 			if tetromino[y][x] == 1 {
 				// Vertical
 				if dy >= ROWS do return false
-				else if dy >= 0 && (dx >= 0 && dx < COLS) do if grid[dy][dx] == 1 do return false
+				else if dy >= 0 && (dx >= 0 && dx < COLS) do if grid[dy][dx] != 0 do return false
 
 				// Horizontal
 				if (dx < 0 || dx >= COLS) do return false
-				else if dy >= 0 do if grid[dy][dx] == 1 do return false
+				else if dy >= 0 do if grid[dy][dx] != 0 do return false
 			}
 		}
 	}
@@ -88,10 +98,10 @@ rotate :: proc(pos: [2]i32) {
 	n := (current_tetromino_idx == 0 || current_tetromino_idx == 1) ? 4 : 3
 	new_pos: [4][4]u8
 
-	/*                        original       cw-rotation    ccw-rotation
-		1 2 3    7 4 1    0,0 1,0 2,0    0,2 0,1 0,0    2,0 2,1 2,2
-		4 5 6    8 5 2    0,1 1,1 2,1    1,2 1,1 1,0    1,0 1,1 1,2
-		7 8 9    9 6 3    0,2 1,2 2,2    2,2 2,1 2,0    0,0 0,1 0,2
+	/*                          original       cw-rotation    ccw-rotation
+		1 2 3      7 4 1    0,0 1,0 2,0    0,2 0,1 0,0    2,0 2,1 2,2
+		4 5 6  ->  8 5 2    0,1 1,1 2,1    1,2 1,1 1,0    1,0 1,1 1,2
+		7 8 9      9 6 3    0,2 1,2 2,2    2,2 2,1 2,0    0,0 0,1 0,2
 	*/
 	
 	for i in 0..<n {
@@ -155,7 +165,7 @@ main :: proc() {
 							dx := pos.x + x
 
 							if current_tetromino[y][x] == 1 {
-								if dy >= 0 do grid[dy][dx] = 1
+								if dy >= 0 do grid[dy][dx] = current_tetromino_idx + 1
 							}
 						}
 					}
@@ -237,13 +247,13 @@ main :: proc() {
 
 				// Current Tetromino
 				if current_tetromino[y][x] == 1 {
-					rl.DrawRectangle(cx, cy, CELL_SIZE, CELL_SIZE, rl.BLUE)
+					rl.DrawRectangle(cx, cy, CELL_SIZE, CELL_SIZE, colors[current_tetromino_idx])
 					rl.DrawRectangleLines(cx, cy, CELL_SIZE, CELL_SIZE, rl.BLACK)
 				}
 
 				// Next Tetromino
 				if next_tetromino[y][x] == 1 {
-					rl.DrawRectangle(nx, ny, CELL_SIZE, CELL_SIZE, rl.LIGHTGRAY)
+					rl.DrawRectangle(nx, ny, CELL_SIZE, CELL_SIZE, colors[next_tetromino_idx])
 					rl.DrawRectangleLines(nx, ny, CELL_SIZE, CELL_SIZE, rl.BLACK)
 				}
 			}
@@ -255,8 +265,8 @@ main :: proc() {
 			for x in 0..<i32(COLS) {
 				dx := x * CELL_SIZE
 
-				if grid[y][x] == 1 {
-					color: rl.Color = is_game_over ? rl.LIGHTGRAY : rl.BLUE
+				if grid[y][x] != 0 {
+					color: rl.Color = is_game_over ? rl.LIGHTGRAY : colors[grid[y][x] - 1]
 					rl.DrawRectangle(dx, dy, CELL_SIZE, CELL_SIZE, color)
 					rl.DrawRectangleLines(dx, dy, CELL_SIZE, CELL_SIZE, rl.BLACK)
 				}
