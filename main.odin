@@ -90,13 +90,18 @@ rotate :: proc(pos: [2]i32) {
 	n := (current_tetromino_idx == 0 || current_tetromino_idx == 1) ? 4 : 3
 	new_pos: [4][4]u8
 
+	/*                        original       cw-rotation    ccw-rotation
+		1 2 3    7 4 1    0,0 1,0 2,0    0,2 0,1 0,0    2,0 2,1 2,2
+		4 5 6    8 5 2    0,1 1,1 2,1    1,2 1,1 1,0    1,0 1,1 1,2
+		7 8 9    9 6 3    0,2 1,2 2,2    2,2 2,1 2,0    0,0 0,1 0,2
+	*/
+	
 	for i in 0..<n {
 		for j in 0..<n {
-			// new_pos[n - j - 1][i] = current_tetromino[i][j]
-			new_pos[j][n - i - 1] = current_tetromino[i][j]
+			// new_pos[n - j - 1][i] = current_tetromino[i][j] // Counter Clockwise Rotation
+			new_pos[j][n - i - 1] = current_tetromino[i][j] // Clockwise Rotation
 		}
 	}
-
 
 	if can_move(pos, new_pos, true) && can_move(pos, new_pos, false) {
 		current_tetromino = new_pos
