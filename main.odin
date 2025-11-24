@@ -121,7 +121,9 @@ main :: proc() {
 	start_pos: [2]i32 = {COLS / 2 - 2, -3}
 	pos: [2]i32 = start_pos
 
+	time_between_fall: f32 = 0.3
 	current_time: f32 = 0
+	is_full_fall: bool = false
 
 	current_tetromino_idx = u8(rand.int31() % 7)
 	current_tetromino = tetrominoes[current_tetromino_idx]
@@ -130,6 +132,8 @@ main :: proc() {
 
 	is_game_over: bool = false
 	score: i32 = 0
+
+	rl.SetTraceLogLevel(.ERROR)
 
 	rl.InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Tetris")
 	defer rl.CloseWindow()
@@ -141,8 +145,12 @@ main :: proc() {
 		if !is_game_over {
 			current_time += rl.GetFrameTime()
 
-			time_between_fall: f32 = 0.3
-			if rl.IsKeyDown(.DOWN) || rl.IsKeyDown(.S) do time_between_fall *= 0.2
+			if (rl.IsKeyDown(.DOWN) || rl.IsKeyDown(.S)) do time_between_fall = 0.3 * 0.2
+			else if (rl.IsKeyUp(.DOWN) || rl.IsKeyUp(.S)) do time_between_fall = 0.3
+
+			if rl.IsKeyPressed(.SPACE) do is_full_fall = true
+
+			if is_full_fall do time_between_fall = 0
 
 			if current_time >= time_between_fall { // VERTICAL MOVEMENT
 				current_time -= time_between_fall
@@ -151,7 +159,7 @@ main :: proc() {
 				if can_move({pos.x, new_pos_y}, current_tetromino) {
 					pos.y = new_pos_y
 				} else {
-					// Change Tetronimo
+					// End of Current Tetronimo's journey
 					for y in 0..<i32(4) {
 						dy := pos.y + y
 
@@ -168,6 +176,9 @@ main :: proc() {
 								if dy >= 0 do grid[dy][dx] = current_tetromino_idx + 1
 							}
 						}
+
+						is_full_fall = false
+						time_between_fall = 0.3
 					}
 
 					// Check for clearing
@@ -192,6 +203,7 @@ main :: proc() {
 						}
 					}
 
+					// Change Tetronimo
 					current_tetromino = next_tetromino
 					current_tetromino_idx = next_tetromino_idx
 					next_tetromino_idx = u8(rand.int31() % 7)
