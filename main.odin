@@ -80,12 +80,13 @@ can_move :: proc(new_pos: [2]i32, tetromino: [4][4]u8) -> bool {
 			dx := new_pos.x + x
 
 			if tetromino[y][x] == 1 {
-				// Vertical
+				// Vertical Bounds
 				if dy >= ROWS do return false
-				else if dy >= 0 && (dx >= 0 && dx < COLS) do if grid[dy][dx] != 0 do return false
 
-				// Horizontal
+				// Horizontal Bounds
 				if (dx < 0 || dx >= COLS) do return false
+
+				// Other Blocks
 				else if dy >= 0 do if grid[dy][dx] != 0 do return false
 			}
 		}
@@ -259,7 +260,8 @@ main :: proc() {
 
 				// Current Tetromino
 				if current_tetromino[y][x] == 1 {
-					rl.DrawRectangle(cx, cy, CELL_SIZE, CELL_SIZE, colors[current_tetromino_idx])
+					color: rl.Color = is_game_over ? rl.LIGHTGRAY : colors[current_tetromino_idx]
+					rl.DrawRectangle(cx, cy, CELL_SIZE, CELL_SIZE, color)
 					rl.DrawRectangleLines(cx, cy, CELL_SIZE, CELL_SIZE, rl.BLACK)
 				}
 
