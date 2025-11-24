@@ -62,7 +62,7 @@ next_tetromino_idx: u8
 next_tetromino: [4][4]u8
 grid: [ROWS][COLS] i32 = 0
 
-can_move :: proc(new_pos: [2]i32, tetromino: [4][4]u8, is_vertical: bool) -> bool {
+can_move :: proc(new_pos: [2]i32, tetromino: [4][4]u8) -> bool {
 	for y in 0..<i32(4) {
 		dy := new_pos.y + y
 
@@ -70,15 +70,13 @@ can_move :: proc(new_pos: [2]i32, tetromino: [4][4]u8, is_vertical: bool) -> boo
 			dx := new_pos.x + x
 
 			if tetromino[y][x] == 1 {
-				if is_vertical {
-					// Vertical
-					if dy >= ROWS do return false
-					else if dy >= 0 && (dx >= 0 && dx < COLS) do if grid[dy][dx] == 1 do return false
-				} else  {
-					// Horizontal
-					if (dx < 0 || dx >= COLS) do return false
-					else if dy >= 0 do if grid[dy][dx] == 1 do return false
-				}
+				// Vertical
+				if dy >= ROWS do return false
+				else if dy >= 0 && (dx >= 0 && dx < COLS) do if grid[dy][dx] == 1 do return false
+
+				// Horizontal
+				if (dx < 0 || dx >= COLS) do return false
+				else if dy >= 0 do if grid[dy][dx] == 1 do return false
 			}
 		}
 	}
@@ -103,7 +101,7 @@ rotate :: proc(pos: [2]i32) {
 		}
 	}
 
-	if can_move(pos, new_pos, true) && can_move(pos, new_pos, false) {
+	if can_move(pos, new_pos) {
 		current_tetromino = new_pos
 	}
 }
@@ -140,7 +138,7 @@ main :: proc() {
 				current_time -= time_between_fall
 				new_pos_y := pos.y + 1
 
-				if can_move({pos.x, new_pos_y}, current_tetromino, true) {
+				if can_move({pos.x, new_pos_y}, current_tetromino) {
 					pos.y = new_pos_y
 				} else {
 					// Change Tetronimo
@@ -197,7 +195,7 @@ main :: proc() {
 				if rl.IsKeyPressed(.A) || rl.IsKeyPressed(.LEFT)  do new_pos_x = pos.x - 1
 				if rl.IsKeyPressed(.D) || rl.IsKeyPressed(.RIGHT) do new_pos_x = pos.x + 1
 
-				if can_move({new_pos_x, pos.y}, current_tetromino, false) && new_pos_x != -COLS {
+				if can_move({new_pos_x, pos.y}, current_tetromino) && new_pos_x != -COLS {
 					pos.x = new_pos_x
 				}
 			}
