@@ -25,8 +25,8 @@ tetrominoes: [7][4][4]u8 = {
 		{0, 0, 0, 0}
 	},
 	{ // T
-		{1, 1, 1, 0},
 		{0, 1, 0, 0},
+		{1, 1, 1, 0},
 		{0, 0, 0, 0},
 		{0, 0, 0, 0}
 	},
@@ -56,15 +56,19 @@ tetrominoes: [7][4][4]u8 = {
 	}
 }
 
+current_tetromino_idx: u8
 current_tetromino: [4][4]u8
+next_tetromino_idx: u8
 next_tetromino: [4][4]u8
 grid: [ROWS][COLS] i32 = 0
 
 can_move :: proc(new_pos: [2]i32, tetromino: [4][4]u8, is_vertical: bool) -> bool {
 	for y in 0..<i32(4) {
 		dy := new_pos.y + y
+
 		for x in 0..<i32(4) {
 			dx := new_pos.x + x
+
 			if tetromino[y][x] == 1 {
 				if is_vertical {
 					// Vertical
@@ -83,11 +87,13 @@ can_move :: proc(new_pos: [2]i32, tetromino: [4][4]u8, is_vertical: bool) -> boo
 }
 
 rotate :: proc(pos: [2]i32) {
+	n := (current_tetromino_idx == 0 || current_tetromino_idx == 1) ? 4 : 3
 	new_pos: [4][4]u8
 
-	for i in 0..<4 {
-		for j in 0..<4 {
-			new_pos[4 - j - 1][i] = current_tetromino[i][j]
+	for i in 0..<n {
+		for j in 0..<n {
+			// new_pos[n - j - 1][i] = current_tetromino[i][j]
+			new_pos[j][n - i - 1] = current_tetromino[i][j]
 		}
 	}
 
@@ -104,8 +110,10 @@ main :: proc() {
 
 	current_time: f32 = 0
 
-	current_tetromino = tetrominoes[rand.int31() % 7]
-	next_tetromino = tetrominoes[rand.int31() % 7]
+	current_tetromino_idx = u8(rand.int31() % 7)
+	current_tetromino = tetrominoes[current_tetromino_idx]
+	next_tetromino_idx = u8(rand.int31() % 7)
+	next_tetromino = tetrominoes[next_tetromino_idx]
 
 	is_game_over: bool = false
 	score: i32 = 0
@@ -172,7 +180,9 @@ main :: proc() {
 					}
 
 					current_tetromino = next_tetromino
-					next_tetromino = tetrominoes[rand.int31() % 7]
+					current_tetromino_idx = next_tetromino_idx
+					next_tetromino_idx = u8(rand.int31() % 7)
+					next_tetromino = tetrominoes[next_tetromino_idx]
 					pos = start_pos
 				}
 			}
@@ -196,8 +206,10 @@ main :: proc() {
 			if rl.IsKeyPressed(.SPACE) {
 				grid = 0
 
-				current_tetromino = tetrominoes[0]
-				next_tetromino = tetrominoes[rand.int31() % 7]
+				current_tetromino_idx = u8(rand.int31() % 7)
+				current_tetromino = tetrominoes[current_tetromino_idx]
+				next_tetromino_idx = u8(rand.int31() % 7)
+				next_tetromino = tetrominoes[next_tetromino_idx]
 
 				is_game_over = false
 				score = 0
@@ -225,7 +237,7 @@ main :: proc() {
 					rl.DrawRectangle(cx, cy, CELL_SIZE, CELL_SIZE, rl.BLUE)
 					rl.DrawRectangleLines(cx, cy, CELL_SIZE, CELL_SIZE, rl.BLACK)
 				}
-				
+
 				// Next Tetromino
 				if next_tetromino[y][x] == 1 {
 					rl.DrawRectangle(nx, ny, CELL_SIZE, CELL_SIZE, rl.LIGHTGRAY)
@@ -264,7 +276,7 @@ main :: proc() {
 		// Game Over
 		if is_game_over {
 			rl.DrawRectangle(
-				SCREEN_WIDTH/2 - 150, 
+				SCREEN_WIDTH/2 - 150,
 				SCREEN_HEIGHT/2 - 100,
 				300, 200,
 				rl.GRAY)
