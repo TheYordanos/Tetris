@@ -95,7 +95,7 @@ can_move :: proc(new_pos: [2]i32, tetromino: [4][4]u8) -> bool {
 	return true
 }
 
-rotate :: proc(pos: [2]i32) {
+rotate :: proc(pos: [2]i32) -> bool {
 	n := (current_tetromino_idx == 0 || current_tetromino_idx == 1) ? 4 : 3
 	new_pos: [4][4]u8
 
@@ -114,7 +114,19 @@ rotate :: proc(pos: [2]i32) {
 
 	if can_move(pos, new_pos) {
 		current_tetromino = new_pos
+		return true
 	}
+
+	return false
+}
+
+calculate_landing_pos :: proc(curr_pos: [2]i32) -> [2]i32 {
+	pos: [2]i32 = {curr_pos.x, curr_pos.y}
+
+	for can_move(pos, current_tetromino) do pos.y += 1
+	pos.y -= 1
+
+	return pos
 }
 
 main :: proc() {
@@ -124,7 +136,6 @@ main :: proc() {
 
 	time_between_fall: f32 = 0.3
 	current_time: f32 = 0
-	is_full_fall: bool = false
 
 	current_tetromino_idx = u8(rand.int31() % 7)
 	current_tetromino = tetrominoes[current_tetromino_idx]
@@ -134,6 +145,8 @@ main :: proc() {
 	is_game_over: bool = false
 	is_paused: bool = false
 	score: i32 = 0
+
+	landing_pos: [2]i32 = calculate_landing_pos(pos)
 
 	rl.SetTraceLogLevel(.ERROR)
 
@@ -153,9 +166,7 @@ main :: proc() {
 			if (rl.IsKeyDown(.DOWN) || rl.IsKeyDown(.S)) do time_between_fall = 0.3 * 0.2
 			else if (rl.IsKeyUp(.DOWN) || rl.IsKeyUp(.S)) do time_between_fall = 0.3
 
-			if rl.IsKeyPressed(.SPACE) do is_full_fall = true
-
-			if is_full_fall do time_between_fall = 0
+			if rl.IsKeyPressed(.SPACE) do pos = landing_pos
 
 			if current_time >= time_between_fall { // VERTICAL MOVEMENT
 				current_time -= time_between_fall
@@ -182,9 +193,6 @@ main :: proc() {
 								if dy >= 0 do grid[dy][dx] = current_tetromino_idx + 1
 							}
 						}
-
-						is_full_fall = false
-						time_between_fall = 0.3
 					}
 
 					// Check for clearing
@@ -215,6 +223,8 @@ main :: proc() {
 					next_tetromino_idx = u8(rand.int31() % 7)
 					next_tetromino = tetrominoes[next_tetromino_idx]
 					pos = start_pos
+
+					landing_pos = calculate_landing_pos(pos)
 				}
 			}
 
@@ -225,12 +235,17 @@ main :: proc() {
 
 				if can_move({new_pos_x, pos.y}, current_tetromino) && new_pos_x != -COLS {
 					pos.x = new_pos_x
+					landing_pos = calculate_landing_pos(pos)
 				}
 			}
 
 			{ // ROTATION
 				if rl.IsKeyPressed(.W) || rl.IsKeyPressed(.UP) {
-					rotate(pos)
+					has_rotated: bool = rotate(pos)
+
+					if has_rotated {
+						landing_pos = calculate_landing_pos(pos)
+					}
 				}
 			}
 		} else { // if is_game_over
@@ -258,16 +273,22 @@ main :: proc() {
 		for y in 0..<i32(4) {
 			cy := (y + pos.y) * i32(CELL_SIZE)
 			ny := y * i32(CELL_SIZE) + 30
+			ly := (y + landing_pos.y) * i32(CELL_SIZE)
 
 			for x in 0..<i32(4) {
 				cx := (x + pos.x) * i32(CELL_SIZE)
 				nx := (x + COLS) * i32(CELL_SIZE) + 30
+				lx := (x + landing_pos.x) * i32(CELL_SIZE)
 
 				// Current Tetromino
 				if current_tetromino[y][x] == 1 {
 					color: rl.Color = is_game_over ? rl.LIGHTGRAY : colors[current_tetromino_idx]
 					rl.DrawRectangle(cx, cy, CELL_SIZE, CELL_SIZE, color)
 					rl.DrawRectangleLines(cx, cy, CELL_SIZE, CELL_SIZE, rl.BLACK)
+
+					// Landing Position
+					color.a = 80
+					rl.DrawRectangle(lx, ly, CELL_SIZE, CELL_SIZE, color)
 				}
 
 				// Next Tetromino
