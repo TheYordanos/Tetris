@@ -132,6 +132,7 @@ main :: proc() {
 	next_tetromino = tetrominoes[next_tetromino_idx]
 
 	is_game_over: bool = false
+	is_paused: bool = false
 	score: i32 = 0
 
 	rl.SetTraceLogLevel(.ERROR)
@@ -139,11 +140,14 @@ main :: proc() {
 	rl.InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Tetris")
 	defer rl.CloseWindow()
 
+	rl.SetExitKey(.KEY_NULL)
 	rl.SetTargetFPS(60)
 
 	for rl.WindowShouldClose() == false {
 
-		if !is_game_over {
+		if rl.IsKeyPressed(.ESCAPE) && !is_game_over do is_paused = !is_paused
+
+		if !is_game_over && !is_paused {
 			current_time += rl.GetFrameTime()
 
 			if (rl.IsKeyDown(.DOWN) || rl.IsKeyDown(.S)) do time_between_fall = 0.3 * 0.2
@@ -167,6 +171,7 @@ main :: proc() {
 						// Game over condition
 						if dy < 0 {
 							is_game_over = true
+							is_paused = false
 						}
 
 						// Embed into grid
@@ -229,7 +234,7 @@ main :: proc() {
 				}
 			}
 		} else { // if is_game_over
-			if rl.IsKeyPressed(.SPACE) {
+			if rl.IsKeyPressed(.SPACE) && is_game_over {
 				grid = 0
 
 				current_tetromino_idx = u8(rand.int31() % 7)
@@ -326,6 +331,34 @@ main :: proc() {
 
 			rl.DrawText(text, x, y, font_size, rl.LIGHTGRAY)
 		}
+
+		// Paused
+		if is_paused {
+			rl.DrawRectangle(
+				SCREEN_WIDTH/2 - 150,
+				SCREEN_HEIGHT/2 - 100,
+				300, 200,
+				rl.GRAY)
+
+			text: cstring = "Game Paused"
+			font_size: i32 = 32
+			width: i32 = rl.MeasureText(text, font_size)
+
+			x: i32 = (SCREEN_WIDTH - width) / 2
+			y: i32 = (SCREEN_HEIGHT - font_size) / 2 - 20
+
+			rl.DrawText(text, x, y, font_size, rl.WHITE)
+
+			text = "<ESC> to resume"
+			font_size = 24
+			width = rl.MeasureText(text, font_size)
+
+			x = (SCREEN_WIDTH - width) / 2
+			y = (SCREEN_HEIGHT - font_size) / 2 + 20
+
+			rl.DrawText(text, x, y, font_size, rl.LIGHTGRAY)
+		}
+
 
 		rl.EndDrawing()
 	}
