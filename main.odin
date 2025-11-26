@@ -166,10 +166,14 @@ main :: proc() {
 			if (rl.IsKeyDown(.DOWN) || rl.IsKeyDown(.S)) do time_between_fall = 0.3 * 0.2
 			else if (rl.IsKeyUp(.DOWN) || rl.IsKeyUp(.S)) do time_between_fall = 0.3
 
-			if rl.IsKeyPressed(.SPACE) do pos = landing_pos
+			if rl.IsKeyPressed(.SPACE) {
+				pos = landing_pos
+				time_between_fall = 0
+			}
 
 			if current_time >= time_between_fall { // VERTICAL MOVEMENT
 				current_time -= time_between_fall
+				time_between_fall = 0.3
 				new_pos_y := pos.y + 1
 
 				if can_move({pos.x, new_pos_y}, current_tetromino) {
@@ -256,6 +260,8 @@ main :: proc() {
 				current_tetromino = tetrominoes[current_tetromino_idx]
 				next_tetromino_idx = u8(rand.int31() % 7)
 				next_tetromino = tetrominoes[next_tetromino_idx]
+
+				landing_pos = calculate_landing_pos(pos)
 
 				is_game_over = false
 				score = 0
