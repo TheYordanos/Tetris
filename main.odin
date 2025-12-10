@@ -321,14 +321,19 @@ main :: proc() {
 
 		// rl.DrawRectangleLines(pos.x * CELL_SIZE, pos.y * CELL_SIZE, 4 * CELL_SIZE, 4 * CELL_SIZE, rl.BLACK)
 
-		{ // Score
+		{
 			text: cstring = fmt.caprint("Score:", score)
 			font_size: i32 = 24
 			width: i32 = rl.MeasureText(text, font_size)
-
 			x: i32 = i32(COLS * CELL_SIZE) + 30
 			y: i32 = i32(ROWS * CELL_SIZE) - 60
+			rl.DrawText(text, x, y, font_size, rl.BLACK)
 
+			text = "<ESC>: Pause"
+			font_size = 20
+			width = rl.MeasureText(text, font_size)
+			x = i32(COLS * CELL_SIZE) + 20
+			y = i32(ROWS * CELL_SIZE) - 100
 			rl.DrawText(text, x, y, font_size, rl.BLACK)
 		}
 
@@ -343,19 +348,15 @@ main :: proc() {
 			text: cstring = "Game Over"
 			font_size: i32 = 32
 			width: i32 = rl.MeasureText(text, font_size)
-
 			x: i32 = (SCREEN_WIDTH - width) / 2
 			y: i32 = (SCREEN_HEIGHT - font_size) / 2 - 20
-
 			rl.DrawText(text, x, y, font_size, rl.WHITE)
 
 			text = "<SPACE> to restart"
 			font_size = 24
 			width = rl.MeasureText(text, font_size)
-
 			x = (SCREEN_WIDTH - width) / 2
 			y = (SCREEN_HEIGHT - font_size) / 2 + 20
-
 			rl.DrawText(text, x, y, font_size, rl.LIGHTGRAY)
 		}
 
@@ -363,29 +364,46 @@ main :: proc() {
 		if is_paused {
 			rl.DrawRectangle(
 				SCREEN_WIDTH/2 - 150,
-				SCREEN_HEIGHT/2 - 100,
-				300, 200,
+				SCREEN_HEIGHT/2 - 175,
+				300, 350,
 				rl.GRAY)
 
 			text: cstring = "Game Paused"
 			font_size: i32 = 32
 			width: i32 = rl.MeasureText(text, font_size)
-
 			x: i32 = (SCREEN_WIDTH - width) / 2
-			y: i32 = (SCREEN_HEIGHT - font_size) / 2 - 20
-
+			y: i32 = (SCREEN_HEIGHT - font_size) / 2 - 100
 			rl.DrawText(text, x, y, font_size, rl.WHITE)
 
 			text = "<ESC> to resume"
 			font_size = 24
 			width = rl.MeasureText(text, font_size)
+			x = (SCREEN_WIDTH - width) / 2
+			y = (SCREEN_HEIGHT - font_size) / 2 - 60
+			rl.DrawText(text, x, y, font_size, rl.LIGHTGRAY)
 
+			text = "Controls"
+			font_size = 32
+			width = rl.MeasureText(text, font_size)
 			x = (SCREEN_WIDTH - width) / 2
 			y = (SCREEN_HEIGHT - font_size) / 2 + 20
+			rl.DrawText(text, x, y, font_size, rl.WHITE)
 
-			rl.DrawText(text, x, y, font_size, rl.LIGHTGRAY)
+			draw_group :: proc(x, y, font_size, gap: i32, ui_text: ..cstring) {
+				y := y
+				x := x
+				for text, i in ui_text {
+					width: i32 = rl.MeasureText(text, font_size)
+					pos_x := x - width / 2
+					if i != 0 do y += font_size + gap
+					rl.DrawText(text, pos_x, y, font_size, rl.LIGHTGRAY)
+				}
+			}
+
+			x = i32(SCREEN_WIDTH) / 2
+			y = (i32(SCREEN_HEIGHT) - font_size) / 2 + 70
+			draw_group(x, y, 20, 15, "<UP>/<W> to rotate", "<DOWN>/<S> to fall faster", "<SPACE> to drop")
 		}
-
 
 		rl.EndDrawing()
 	}
