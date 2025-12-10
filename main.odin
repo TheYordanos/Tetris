@@ -11,14 +11,18 @@ CELL_SIZE :: 32
 SCREEN_WIDTH :: COLS * CELL_SIZE + (4 * CELL_SIZE + 30)
 SCREEN_HEIGHT :: ROWS * CELL_SIZE
 
-colors: [7]rl.Color = {
+colors: [9]rl.Color = {
 	{0, 240, 240, 255}, // I
 	{240, 240, 0, 255}, // O
 	{160, 0, 240, 255}, // T
 	{0, 240, 0, 255},   // S
 	{240, 0, 0, 255},   // Z
 	{0, 0, 240, 255},   // J
-	{240, 160, 0, 255}  // L
+	{240, 160, 0, 255}, // L
+
+	// Blink
+	rl.RED,
+	rl.WHITE,
 }
 
 tetrominoes: [7][4][4]u8 = {
@@ -148,6 +152,11 @@ main :: proc() {
 
 	landing_pos: [2]i32 = calculate_landing_pos(pos)
 
+	time_between_blink: f32 = 0.1
+	max_blink_count: i32 = 5
+	clear_rows: [dynamic][3]f32 // { row_to_remove, blink_count, current_time }
+	defer delete(clear_rows)
+
 	rl.SetTraceLogLevel(.ERROR)
 
 	rl.InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Tetris")
@@ -200,7 +209,7 @@ main :: proc() {
 					}
 
 					// Check for clearing
-					for y: i32 = ROWS - 1; y >= 0; {
+					for y: i32 = ROWS - 1; y >= 0; y -= 1 {
 						is_full_row: bool = true
 						for x in 0..<COLS {
 							if grid[y][x] == 0 do is_full_row = false
@@ -208,16 +217,10 @@ main :: proc() {
 
 						// Move all things down
 						if is_full_row {
-
+							append(&clear_rows, [3]f32{f32(y), 0, 0})
 							score += 1
 
-							for j: i32 = y; j > 0; j -= 1{
-								for x in 0..<COLS {
-									grid[j][x] = grid[j - 1][x]
-								}
-							}
-						} else {
-							y -= 1
+							for x in 0..<COLS do grid[y][x] = 8
 						}
 					}
 
@@ -252,6 +255,34 @@ main :: proc() {
 					}
 				}
 			}
+
+			// Row Blinking & Clear
+			#reverse for &value, i in clear_rows {
+				row: i32 = i32(value[0])
+
+				if row == -1 do continue
+
+				value[2] += rl.GetFrameTime()
+
+				if value[2] > time_between_blink {
+					value[2] -= time_between_blink
+					value[1] += 1
+
+					for x in 0..<COLS do grid[row][x] = i32(value[1]) & 1 == 0 ? 8 : 9
+				}
+
+				if i32(value[1]) >= max_blink_count {
+					for j: i32 = row; j > 0; j -= 1{
+						for x in 0..<COLS {
+							grid[j][x] = grid[j - 1][x]
+						}
+					}
+
+					ordered_remove(&clear_rows, i)
+					landing_pos = calculate_landing_pos(pos)
+				}
+			}
+
 		} else { // if is_game_over
 			if rl.IsKeyPressed(.SPACE) && is_game_over {
 				grid = 0
