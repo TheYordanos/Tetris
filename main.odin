@@ -21,7 +21,7 @@ colors: [9]rl.Color = {
 	{240, 160, 0, 255}, // L
 
 	// Blink
-	rl.RED,
+	rl.GRAY,
 	rl.WHITE,
 }
 
@@ -153,7 +153,7 @@ main :: proc() {
 	landing_pos: [2]i32 = calculate_landing_pos(pos)
 
 	time_between_blink: f32 = 0.1
-	max_blink_count: i32 = 5
+	max_blink_count: i32 = 3
 	clear_rows: [dynamic][3]f32 // { row_to_remove, blink_count, current_time }
 	defer delete(clear_rows)
 
